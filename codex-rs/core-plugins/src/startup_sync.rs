@@ -74,10 +74,20 @@ fn curated_plugins_sha_path(codex_home: &Path) -> PathBuf {
     codex_home.join(CURATED_PLUGINS_SHA_FILE)
 }
 
+const EGRESS_LOCKDOWN_DISABLES_CURATED_SYNC: bool = true;
+
 pub fn sync_openai_plugins_repo(
     codex_home: &Path,
     http_client_factory: HttpClientFactory,
 ) -> Result<String, String> {
+    // Egress-lockdown fork: the curated OpenAI plugins repository lives on
+    // GitHub, which is outside the egress allowlist. Never sync it.
+    if EGRESS_LOCKDOWN_DISABLES_CURATED_SYNC {
+        let _ = (codex_home, http_client_factory);
+        return Err(
+            "curated OpenAI plugin sync is disabled by the egress allowlist".to_string(),
+        );
+    }
     // Keep Git-only egress working without trusting workspace PATH entries.
     let git_binary = codex_utils_path::system_executable("git");
     // Apple's /usr/bin/git is an installer shim when developer tools are absent.

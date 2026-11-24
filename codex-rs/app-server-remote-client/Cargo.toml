@@ -14,6 +14,7 @@ workspace = true
 
 [dependencies]
 codex-app-server-protocol = { workspace = true }
+codex-http-client = { workspace = true }
 codex-uds = { workspace = true }
 codex-utils-absolute-path = { workspace = true }
 codex-utils-rustls-provider = { workspace = true }

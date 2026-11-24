@@ -182,7 +182,11 @@ impl RequestBuilder {
         match self.backend {
             HttpClientBackend::Routed(pool) => pool.send(self.request?).await,
             HttpClientBackend::Direct(client) => {
-                Ok(client.execute(self.request?.build(&client)?).await?.into())
+                let request = self.request?.build(&client)?;
+                if !crate::egress_allowlist::is_allowed_egress_url(request.url()) {
+                    return Err(crate::NetworkPolicyDenied::Destination.into());
+                }
+                Ok(client.execute(request).await?.into())
             }
         }
     }

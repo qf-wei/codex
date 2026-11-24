@@ -2331,6 +2331,7 @@ name = "codex-app-server-remote-client"
 version = "0.0.0"
 dependencies = [
  "codex-app-server-protocol",
+ "codex-http-client",
  "codex-uds",
  "codex-utils-absolute-path",
  "codex-utils-rustls-provider",
@@ -5180,6 +5181,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "clap",
+ "codex-http-client",
  "h2",
  "h3",
  "h3-quinn",

@@ -112,6 +112,8 @@ pub async fn run_ssh_proxy(
     access_token: impl Future<Output = Result<String>>,
     stdout: impl AsyncWrite + Unpin,
 ) -> Result<()> {
+    // Egress-lockdown fork: the SSH gateway must be on the egress allowlist.
+    codex_http_client::check_egress_url(&args.proxy_url)?;
     let (target, headers) = args.ssh_destination()?;
     let tunnel = TransportConfig::new(super::tls_config()?)?
         .open(&target, async {

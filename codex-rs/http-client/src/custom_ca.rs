@@ -299,8 +299,11 @@ fn build_rustls_root_store(
 /// certificate with that builder.
 fn build_reqwest_client_with_env(
     env_source: &dyn EnvSource,
-    mut builder: reqwest::ClientBuilder,
+    builder: reqwest::ClientBuilder,
 ) -> Result<reqwest::Client, BuildCustomCaTransportError> {
+    let mut builder = builder.dns_resolver(std::sync::Arc::new(
+        crate::egress_allowlist::AllowlistResolver,
+    ));
     if let Some(bundle) = env_source.configured_ca_bundle() {
         ensure_rustls_crypto_provider();
         info!(

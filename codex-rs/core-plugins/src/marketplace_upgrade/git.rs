@@ -15,6 +15,7 @@ pub(super) fn git_remote_revision(
     timeout: Duration,
     mode: PluginGitMode,
 ) -> Result<String, String> {
+    crate::egress::ensure_git_source_allowed(source)?;
     if let Some(ref_name) = ref_name
         && is_full_git_sha(ref_name)
     {
@@ -139,6 +140,7 @@ fn clone_git_source(
     reference: Option<CloneReference<'_>>,
     mode: PluginGitMode,
 ) -> Result<(), String> {
+    crate::egress::ensure_git_source_allowed(source)?;
     let timeout = MARKETPLACE_UPGRADE_GIT_TIMEOUT;
     let destination = git_path_arg(destination);
     let mut command = git_command(mode);

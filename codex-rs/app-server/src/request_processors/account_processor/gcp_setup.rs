@@ -30,11 +30,20 @@ use std::path::Path;
 use std::path::PathBuf;
 use tokio::fs::File;
 
+const EGRESS_LOCKDOWN_BLOCKS_GCP: bool = true;
+
 pub(crate) async fn handle_gcp_setup(
     processor: &AccountRequestProcessor,
     params: GcpSetupParams,
 ) -> Result<Option<ClientResponsePayload>, JSONRPCErrorError> {
     processor.ensure_provider_login_allowed(CloudLoginProvider::Gcp)?;
+    // Egress-lockdown fork: Google Cloud endpoints are outside the egress allowlist.
+    if EGRESS_LOCKDOWN_BLOCKS_GCP {
+        let _ = params;
+        return Err(invalid_request(
+            "Google Cloud providers are disabled by the egress allowlist (only localhost, Azure and AWS are permitted)",
+        ));
+    }
     let network_policy = processor
         .auth_manager
         .application_network_policy()

@@ -738,6 +738,9 @@ async fn connect_websocket_endpoint(
             format!("invalid websocket URL `{websocket_url}`: {err}"),
         )
     })?;
+    if let Err(denied) = codex_http_client::check_egress_url(&url) {
+        return Err(IoError::new(ErrorKind::PermissionDenied, denied.to_string()));
+    }
     if auth_token.is_some() && !websocket_url_supports_auth_token(&url) {
         return Err(IoError::new(
             ErrorKind::InvalidInput,

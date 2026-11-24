@@ -3,6 +3,7 @@ mod artifact_operation;
 mod catalog;
 mod command_migration;
 mod discoverable;
+mod egress;
 mod error_subtype;
 mod executor_catalog;
 mod executor_hooks;

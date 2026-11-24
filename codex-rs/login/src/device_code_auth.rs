@@ -163,6 +163,7 @@ fn print_device_code_prompt(verification_url: &str, code: &str) {
 }
 
 pub async fn request_device_code(opts: &ServerOptions) -> std::io::Result<DeviceCode> {
+    crate::server::ensure_issuer_allowed(&opts.issuer)?;
     let base_url = opts.issuer.trim_end_matches('/');
     let api_base_url = format!("{base_url}/api/accounts");
     let client = create_raw_auth_client(

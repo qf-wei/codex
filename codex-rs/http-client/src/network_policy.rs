@@ -279,6 +279,13 @@ impl NetworkPolicy {
 
     /// Checks a destination before proxy resolution, DNS, or transport work starts.
     pub fn acquire(&self, url: &Url) -> Result<NetworkPermit, NetworkPolicyDenied> {
+        if !crate::egress_allowlist::is_allowed_egress_url(url) {
+            tracing::warn!(
+                host = url.host_str().unwrap_or_default(),
+                "outbound request blocked by egress allowlist"
+            );
+            return Err(NetworkPolicyDenied::Destination);
+        }
         if self
             .endpoints
             .as_ref()

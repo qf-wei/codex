@@ -136,6 +136,7 @@ pub fn run_main(args: Args) -> Result<()> {
     }
 
     let upstream_url = Url::parse(&args.upstream_url).context("parsing --upstream-url")?;
+    codex_http_client::check_egress_url(&upstream_url).context("checking --upstream-url")?;
     let host = match (upstream_url.host_str(), upstream_url.port()) {
         (Some(host), Some(port)) => format!("{host}:{port}"),
         (Some(host), None) => host.to_string(),

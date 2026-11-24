@@ -82,6 +82,7 @@ fn pack_npm_package(
     registry: Option<&str>,
     npm_command: &OsStr,
 ) -> Result<(), String> {
+    crate::egress::ensure_npm_registry_allowed(registry)?;
     let package_spec = version.map_or_else(
         || package.to_string(),
         |version| format!("{package}@{version}"),

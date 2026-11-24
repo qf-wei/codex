@@ -396,7 +396,9 @@ impl HttpClientBuilder {
     }
 
     fn base_reqwest_builder(self) -> reqwest::ClientBuilder {
-        let mut builder = reqwest::Client::builder();
+        let mut builder = reqwest::Client::builder().dns_resolver(std::sync::Arc::new(
+            crate::egress_allowlist::AllowlistResolver,
+        ));
         #[cfg(windows)]
         if let Some(path) = self.windows_proxy_pipe_path {
             builder = builder.windows_named_pipe(path);

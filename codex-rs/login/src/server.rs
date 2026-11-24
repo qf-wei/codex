@@ -178,7 +178,24 @@ impl ShutdownHandle {
 }
 
 /// Starts a local callback server and returns the browser auth URL.
+/// Egress-lockdown fork: ChatGPT sign-in is only possible against an issuer on
+/// the egress allowlist, so the default `auth.openai.com` flow is refused before
+/// a browser is opened or any request is sent.
+pub(crate) fn ensure_issuer_allowed(issuer: &str) -> io::Result<()> {
+    if codex_http_client::is_allowed_egress_url_str(issuer) {
+        Ok(())
+    } else {
+        Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            format!(
+                "ChatGPT sign-in via `{issuer}` is disabled by the egress allowlist; use an Azure or Amazon Bedrock provider instead"
+            ),
+        ))
+    }
+}
+
 pub fn run_login_server(opts: ServerOptions) -> io::Result<LoginServer> {
+    ensure_issuer_allowed(&opts.issuer)?;
     let pkce = generate_pkce();
     let state = opts.force_state.clone().unwrap_or_else(generate_state);
 

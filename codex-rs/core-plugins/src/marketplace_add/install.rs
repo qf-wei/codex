@@ -8,6 +8,7 @@ pub(super) fn clone_git_source(
     sparse_paths: &[String],
     destination: &Path,
 ) -> Result<(), MarketplaceAddError> {
+    crate::egress::ensure_git_source_allowed(url).map_err(MarketplaceAddError::InvalidRequest)?;
     let destination_string = destination.to_string_lossy().to_string();
     if sparse_paths.is_empty() {
         run_git(

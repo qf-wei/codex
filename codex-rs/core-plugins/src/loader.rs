@@ -1814,6 +1814,7 @@ fn clone_git_plugin_source(
     destination: &Path,
     mode: PluginGitMode,
 ) -> Result<(), String> {
+    crate::egress::ensure_git_source_allowed(url)?;
     let clone_cwd = match mode {
         PluginGitMode::Automatic => Some(codex_home),
         PluginGitMode::Manual => None,

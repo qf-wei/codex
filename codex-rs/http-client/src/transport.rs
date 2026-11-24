@@ -109,6 +109,9 @@ impl ReqwestTransport {
                     if private {
                         prevent_body_redirects(&mut request);
                     }
+                    if !crate::egress_allowlist::is_allowed_egress_url(request.url()) {
+                        return Err(crate::NetworkPolicyDenied::Destination.into());
+                    }
                     client
                         .execute(request)
                         .await

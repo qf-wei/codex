@@ -8,30 +8,21 @@ use codex_utils_absolute_path::AbsolutePathBuf;
 use serde::Deserialize;
 use serde::Serialize;
 
-pub(crate) const STATSIG_OTLP_HTTP_ENDPOINT: &str = "https://ab.chatgpt.com/otlp/v1/metrics";
-pub(crate) const STATSIG_API_KEY_HEADER: &str = "statsig-api-key";
-pub(crate) const STATSIG_API_KEY: &str = "client-MkRuleRQBd6qakfnDYqJVR9JuXcY57Ljly3vi5JVUIO";
-
 pub(crate) fn resolve_exporter(exporter: &OtelExporter) -> OtelExporter {
     match exporter {
-        OtelExporter::Statsig => {
-            // Keep the built-in Statsig default off in debug builds so
-            // incremental local development and test runs do not emit
-            // best-effort OTEL traffic unless a test or binary opts into an
-            // explicit exporter configuration.
-            if cfg!(debug_assertions) {
-                return OtelExporter::None;
-            }
-
-            OtelExporter::OtlpHttp {
-                endpoint: STATSIG_OTLP_HTTP_ENDPOINT.to_string(),
-                headers: HashMap::from([(
-                    STATSIG_API_KEY_HEADER.to_string(),
-                    STATSIG_API_KEY.to_string(),
-                )]),
-                protocol: OtelHttpProtocol::Json,
-                tls: None,
-            }
+        // Egress-lockdown fork: the built-in Statsig exporter
+        // (an OpenAI-hosted metrics endpoint) is removed and never used.
+        OtelExporter::Statsig => OtelExporter::None,
+        // Explicit exporters may only target the compiled-in egress allowlist
+        // (loopback collectors, Azure, AWS).
+        OtelExporter::OtlpHttp { endpoint, .. } | OtelExporter::OtlpGrpc { endpoint, .. }
+            if !codex_http_client::is_allowed_egress_url_str(endpoint) =>
+        {
+            tracing::warn!(
+                endpoint = %endpoint,
+                "OTEL exporter disabled: endpoint blocked by egress allowlist"
+            );
+            OtelExporter::None
         }
         _ => exporter.clone(),
     }
@@ -137,6 +128,24 @@ pub enum OtelExporter {
 mod tests {
     use super::OtelExporter;
     use super::resolve_exporter;
+
+    #[test]
+    fn exporters_outside_egress_allowlist_are_disabled() {
+        let blocked = OtelExporter::OtlpHttp {
+            endpoint: "https://collector.example.com/v1/metrics".to_string(),
+            headers: std::collections::HashMap::new(),
+            protocol: super::OtelHttpProtocol::Json,
+            tls: None,
+        };
+        assert!(matches!(resolve_exporter(&blocked), OtelExporter::None));
+        let local = OtelExporter::OtlpHttp {
+            endpoint: "http://localhost:4318/v1/metrics".to_string(),
+            headers: std::collections::HashMap::new(),
+            protocol: super::OtelHttpProtocol::Json,
+            tls: None,
+        };
+        assert!(matches!(resolve_exporter(&local), OtelExporter::OtlpHttp { .. }));
+    }
 
     #[test]
     fn statsig_default_metrics_exporter_is_disabled_in_debug_builds() {

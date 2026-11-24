@@ -799,11 +799,22 @@ fn handle_app_exit(
     Ok(())
 }
 
+const EGRESS_LOCKDOWN_DISABLES_SELF_UPDATE: bool = true;
+
 /// Run the update action and print the result.
 fn run_update_action(
     action: UpdateAction,
     cli_executable: Option<&std::path::Path>,
 ) -> anyhow::Result<()> {
+    // Egress-lockdown fork: every update action downloads from npm, Homebrew,
+    // GitHub or chatgpt.com via external tools that bypass the egress
+    // allowlist. Updates must be built and installed from this fork instead.
+    if EGRESS_LOCKDOWN_DISABLES_SELF_UPDATE {
+        let _ = (action, cli_executable);
+        anyhow::bail!(
+            "self-update is disabled in this build (egress allowlist: localhost, Azure and AWS only); rebuild from source to update"
+        );
+    }
     if let UpdateAction::Daemon(source) = action {
         let executable = cli_executable
             .ok_or_else(|| anyhow::anyhow!("Cannot locate the launching Codex CLI"))?;

@@ -233,6 +233,11 @@ fn candidate_applications_dirs() -> anyhow::Result<Vec<PathBuf>> {
 }
 
 async fn download_dmg(url: &str, dest: &Path) -> anyhow::Result<()> {
+    // Egress-lockdown fork: `curl` bypasses the in-process allowlist.
+    anyhow::ensure!(
+        codex_http_client::is_allowed_egress_url_str(url),
+        "desktop app download from `{url}` is blocked by the egress allowlist (localhost, Azure and AWS only)"
+    );
     eprintln!("Downloading installer...");
     let status = Command::new("curl")
         .arg("-fL")

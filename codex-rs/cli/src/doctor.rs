@@ -2576,6 +2576,12 @@ fn auth_mode_name(auth: &CodexAuth) -> &'static str {
 }
 
 async fn dns_address_family_details(host: &str, port: u16) -> Vec<String> {
+    // Egress-lockdown fork: do not even resolve hosts outside the allowlist.
+    if !codex_http_client::is_allowed_egress_host(host) {
+        return vec![format!(
+            "DNS: {host} not resolved (blocked by egress allowlist)"
+        )];
+    }
     match tokio::net::lookup_host((host, port)).await {
         Ok(addresses) => {
             let addresses = addresses.collect::<Vec<_>>();

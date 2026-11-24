@@ -33,6 +33,8 @@ use super::network;
 const MAX_VERSION_RESPONSE_BYTES: usize = 1024 * 1024;
 
 const VERSION_FILE_NAME: &str = "version.json";
+/// Egress-lockdown fork: update probes target GitHub, Homebrew, npm and OpenAI CDNs.
+const EGRESS_LOCKDOWN_DISABLES_UPDATE_PROBES: bool = true;
 const GITHUB_LATEST_RELEASE_URL: &str = "https://api.github.com/repos/openai/codex/releases/latest";
 const HOMEBREW_CASK_API_URL: &str = "https://formulae.brew.sh/api/cask/codex.json";
 #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
@@ -75,18 +77,23 @@ pub(super) async fn updates_check(config: &Config) -> DoctorCheck {
         ClientRouteClass::Other,
     );
 
-    match fetch_latest_version(&client, &install_context).await {
-        Ok(latest_version) => {
-            details.push(format!("latest version: {latest_version}"));
-            if is_newer(&latest_version, env!("CARGO_PKG_VERSION")) == Some(true) {
-                details.push("latest version status: newer version is available".to_string());
-            } else {
-                details.push("latest version status: current version is not older".to_string());
+    if EGRESS_LOCKDOWN_DISABLES_UPDATE_PROBES {
+        details.push("latest version probe: disabled by egress allowlist".to_string());
+    } else {
+        match fetch_latest_version(&client, &install_context).await {
+            Ok(latest_version) => {
+                details.push(format!("latest version: {latest_version}"));
+                if is_newer(&latest_version, env!("CARGO_PKG_VERSION")) == Some(true) {
+                    details.push("latest version status: newer version is available".to_string());
+                } else {
+                    details
+                        .push("latest version status: current version is not older".to_string());
+                }
             }
-        }
-        Err(err) => {
-            status = status.max(CheckStatus::Warning);
-            details.push(format!("latest version probe: {err}"));
+            Err(err) => {
+                status = status.max(CheckStatus::Warning);
+                details.push(format!("latest version probe: {err}"));
+            }
         }
     }
 
@@ -142,6 +149,12 @@ pub(super) async fn append_desktop_update(
     let desktop_update_display_url = desktop_update_url
         .split_once('?')
         .map_or(desktop_update_url, |(endpoint, _)| endpoint);
+    if EGRESS_LOCKDOWN_DISABLES_UPDATE_PROBES {
+        checks[reachability_index].details.push(format!(
+            "desktop assets CDN: {desktop_update_display_url} not probed (disabled by egress allowlist)"
+        ));
+        return;
+    }
     let client = RouteAwareClientPool::new_without_request_logging(
         config.http_client_factory(),
         ClientRouteClass::Other,
